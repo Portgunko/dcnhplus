@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>DCNH+　性格診断</title>
+<style>
+ body{font-family:"Noto Sans JP",sans-serif;margin:0;background:#fafafa;color:#222;line-height:1.6;-webkit-font-smoothing:antialiased}
+ header{background:#3949ab;color:#fff;padding:1rem;text-align:center;font-size:1.5rem;font-weight:700}
+ main{max-width:900px;margin:1.5rem auto;padding:0 1rem}
+ .card{background:#fff;border-radius:14px;box-shadow:0 2px 6px rgba(0,0,0,.12);padding:1.25rem;margin-bottom:1.25rem}
+ .question{font-weight:600;margin-bottom:.8rem}
+ .options{display:flex;flex-wrap:wrap;gap:.4rem}
+ label{display:flex;align-items:center;gap:.25rem}
+ input[type=radio]{accent-color:#3949ab}
+ button{background:#3949ab;color:#fff;border:none;border-radius:8px;padding:.75rem 1.5rem;font-size:1rem;cursor:pointer}
+ button:disabled{opacity:.4;cursor:not-allowed}
+ button:hover:not(:disabled){opacity:.9}
+ #result{display:none}
+ .bar{height:16px;background:#5c6bc0;border-radius:8px}
+ .bar-container{background:#e0e0e0;border-radius:8px;overflow:hidden;margin:.25rem 0 1rem}
+ .style-name{font-weight:700;font-size:1.2rem;margin-top:1.2rem;color:#3949ab}
+ .explanation{margin-top:1rem}
+ @media(max-width:600px){header{font-size:1.25rem} .question{font-size:.95rem}}
+</style>
+</head>
+<body>
+<header>DCNH+　性格診断（48問）</header>
+<main>
+<form id="quizForm"></form>
+<div style="text-align:center"><button id="submitBtn" type="button" onclick="computeScores()">結果を見る</button></div>
+<section id="result" class="card"></section>
+</main>
+<script>
+// 基本データ
+const foundations=["エンパシー","バランス","オートノミー","ソリダリティ","ピュリティ","ストラクチャー"];
+// 自然な日本語に訳した48問
+const questions=[
+"自分の体を粗末に扱ったり健康を顧みない生き方は、正しくないと思う。",
+"男女とも平等にチャンスを得られる社会であるべきだ。",
+"たとえ大義があっても、テロ組織と交渉するのは許されない。",
+"社会は伝統や文化的遺産を誇りをもって守るべきだ。",
+"人種や民族、階級だけを理由に人を差別するのは間違っている。",
+"重い遺伝性疾患があっても、生殖の権利を奪われるべきではない。",
+"職場では礼儀正しく、けじめを保つことが大切だ。",
+"親切を受けたら、後で何らかの形でお返しをするべきだ。",
+"ブランドや流行だけを理由に物を買うのはくだらないと思う。",
+"大きな社会をまとめるには、はっきりしたリーダーと序列が必要だ。",
+"気軽なカジュアルセックスは、もっと抑制されるべきだ。",
+"家族はうまくいかなくても、なるべく絆を保つべきだ。",
+"宗教や精神性が根付いた社会は、無神論的な社会より望ましい。",
+"子どもは冷徹な成功者より、優しく質素な人に育つほうが良い。",
+"他国を侵略し占領することは、よほどの脅威がない限り正当化できない。",
+"同僚にネガティブなフィードバックをするなら、角が立たないよう丁寧に伝えるべきだ。",
+"どんなに危険な人物でも、残酷すぎる罰は与えるべきではない。",
+"子どもが大人になるまでは、親の言うことをきちんと聞かせる方がよい。",
+"無実の人を犠牲にしてまで達成すべき崇高な目的など無い。",
+"軍や警察でなくても、責任ある市民には自己防衛用の武器を持つ権利がある。",
+"莫大な富を得た人は、その一部を社会や弱者に還元する義務がある。",
+"子どもを持ち家庭を築く人生は、子どもを持たない人生より高尚だと思う。",
+"たとえ暴動の恐れがあっても、平和的な集会や抗議の自由は守られるべきだ。",
+"罪を犯した者には、それに見合った罰を与えることが社会の秩序に欠かせない。",
+"国民のプライバシーは、監視を強めてテロを防ぐことより優先されるべきだ。",
+"芸術や建築には一定の美しさと洗練の基準があった方が良い。",
+"メンタルヘルスについてオープンに話す方が、隠してしまうより健全だ。",
+"国家が他国に頼りすぎないよう、経済や軍事の自立を保つことは重要だ。",
+"働かなくても巨額の財産を相続する人と、何も得られない人がいる社会には大きな問題がある。",
+"どんな被告でも、公正な裁判と弁護を受ける権利がある。",
+"友人のために裁判や捜査を妨げるのは間違っている。",
+"政府はまず自国民の利益を優先し、世界全体の福祉は二の次でいい。",
+"価値観や作法が似通った人たちでコミュニティをつくり、新しく入る人にはその文化に合わせてもらう方がうまくいく。",
+"祖国が侵略されたら、呼びかけを受けたすべての市民は残って戦うべきだ。",
+"能力、努力、リスクを取った人がより多く報われるのは当然だ。",
+"自国の文化が好きなら、国の影響力を海外に広げる取り組みを支持すべきだ。",
+"人目がなく物を壊さなくても、慰霊碑の前でふざけるような行為は不敬で不道徳だ。",
+"社会に馴染めない人でも、善良であれば丁寧に扱うべきだ。",
+"健康な成人は、自分の体に何を取り入れるかを自己責任で決める権利がある。",
+"平時に政府が市民の土地を強制収用するのは、補償があっても望ましくない。",
+"すべての市民に選挙権があり、選挙でリーダーを選ぶ民主制は最も望ましい。",
+"自分では同じ偉業を成し遂げていないのに、専門家や危険職を軽々しく批判するのは下品だ。",
+"現行制度が国民を十分に守っているなら、理不尽に思える法律でも守るべきだ。",
+"いくら同意があって無害でも、多くの人が強い嫌悪を感じる行為（例：成人の双子の合意性交）は不道徳だと思う。",
+"企業や学校が締切や品質に厳しい完璧主義の文化を持つのは評価に値する。",
+"危険視される意見でも、政府がSNSや大学での表現を規制するのは良くない。",
+"地位の高い人物が特別扱いを求めるのは許されない。",
+"国民に不都合な真実でも、隠すより公表する方が正しい。"
+];
+// 0=Care 1=Fairness 2=Liberty 3=Loyalty 4=Sanctity 5=Authority
+const mapping=[4,1,5,3,1,2,5,1,4,5,4,3,4,0,0,0,0,5,0,2,1,3,2,5,2,4,0,0,3,1,1,1,3,3,1,3,4,0,2,2,2,1,5,5,4,5,2,1];
+const scale=["強く賛成","賛成","やや賛成","どちらでもない","やや反対","反対","強く反対"];
+// 質問フォーム生成
+const form=document.getElementById('quizForm');
+questions.forEach((q,i)=>{
+ const sec=document.createElement('section');
+ sec.className='card';
+ const p=document.createElement('p');p.className='question';p.textContent=`Q${i+1}. ${q}`;sec.appendChild(p);
+ const opt=document.createElement('div');opt.className='options';
+ scale.forEach((txt,j)=>{
+  const label=document.createElement('label');
+  const input=document.createElement('input');input.type='radio';input.name=`q${i}`;input.value=7-j;if(j===3)input.checked=true;
+  label.appendChild(input);label.appendChild(document.createTextNode(txt));opt.appendChild(label);
+ });
+ sec.appendChild(opt);form.appendChild(sec);
+});
+// スコア計算
+function computeScores(){
+ const totals=[0,0,0,0,0,0];
+ const counts=[0,0,0,0,0,0];
+ for(let i=0;i<questions.length;i++){
+  const sel=document.querySelector(`input[name=q${i}]:checked`);if(!sel){alert('未回答の設問があります');return;}
+  const f=mapping[i];totals[f]+=parseInt(sel.value);counts[f]++;
+ }
+ const perc=totals.map((s,i)=>Math.round(s/(counts[i]*7)*100));
+ // スタイル判定
+ const hi=v=>v>=70, lo=v=>v<40;
+ const [c,f,l,loy,p,a]=perc;
+ let style='（該当スタイルなし／中間型）';
+ if(hi(c)&&hi(f)&&hi(l)&&lo(a))style='ハーモナイザー（調和者）';
+ else if(hi(l)&&!hi(c)&&!hi(f))style='クリエイター（創造者）';
+ else if(hi(loy)&&hi(p)&&hi(a)&&!hi(c)&&!hi(f))style='ドミネーター（支配者）';
+ else if(hi(c)&&hi(f)&&hi(l)&&hi(loy)&&hi(p)&&hi(a))style='ノーマライザー（標準化者）';
+ else if(hi(f)&&hi(l)&&lo(a))style='イコライザー（平衡者）';
+ else if(hi(c)&&hi(f)&&!hi(l))style='リフォーマー（改革者）';
+ else if(hi(f)&&hi(loy)&&hi(p))style='ストラクチャラー（構造者）';
+ else if(hi(f)&&!hi(c)&&!hi(l)&&!hi(loy)&&!hi(p)&&!hi(a))style='アジテーター（鼓舞者）';
+ // 結果表示
+ const res=document.getElementById('result');res.style.display='block';
+ res.innerHTML='<h2>診断結果</h2>';
+ foundations.forEach((n,i)=>{
+  res.innerHTML+=`<div>${n}: ${perc[i]}%<div class='bar-container'><div class='bar' style='width:${perc[i]}%'></div></div></div>`;
+ });
+ res.innerHTML+=`<p class='style-name'>あなたのソーシャルロール: ${style}</p>`;
+ res.innerHTML+=`<div class='explanation'><strong>【8つのソーシャルロール】</strong><br><br>
+ <u>ハーモナイザー（調和者）</u><br>多様な価値観や立場の共存を重視し、対立を和らげることを目指すタイプ。<br>→ エンパシー、バランス、オートノミーが高め<br><br>
+ <u>クリエイター（創造者）</u><br>個々の選択や独自性を尊重し、柔軟で自由な環境を求めるタイプ。<br>→ オートノミーが高め<br><br>
+ <u>ドミネーター（支配者）</u><br>秩序や統一性を大事にし、明確な役割やルールによって集団をまとめようとするタイプ。<br>→ ソリダリティ、ピュリティ、ストラクチャーが高め<br><br>
+ <u>ノーマライザー（標準化者）</u><br>慣習や安定した枠組みを維持することに安心感を持ち、変化より継続を優先するタイプ。<br>→ 6つとも高め<br><br>
+ <u>イコライザー（平衡者）</u><br>個人の自由と他者との公平な関係を両立させようとするタイプ。<br>→ バランス、オートノミーが高め<br><br>
+ <u>リフォーマー（改革者）</u><br>現状の仕組みに改善の余地を見つけ、より多くの人にとって機能する形を目指すタイプ。<br>→ エンパシー、バランスが高め<br><br>
+ <u>ストラクチャラー（構造者）</u><br>強固な組織体制や一貫した運営を通じて、均質で整った社会の実現を目指すタイプ。<br>→ バランス、ソリダリティ、ピュリティが高め。しばしばストラクチャーも高め<br><br>
+ <u>アジテーター（鼓舞者）</u><br>広い範囲での連携と変革を促し、理想のビジョンを実現しようとするタイプ。<br>→ バランスが高め
+ </div>`;
+ window.scrollTo({top:0,behavior:'smooth'});
+}
+</script>
+</body>
+</html>
